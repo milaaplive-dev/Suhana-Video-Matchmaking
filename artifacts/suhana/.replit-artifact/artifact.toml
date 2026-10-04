@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Suhana"
+description = "A welcoming matchmaking app for discovering people, chatting, and starting one-to-one video calls, with profiles, safety tools, and a demo credits wallet."
+version = "1.0.0"
+id = "artifacts/suhana"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19043
+
+[services.development]
+run = "pnpm --filter @workspace/suhana run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/suhana", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/suhana/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19043"
+BASE_PATH = "/"

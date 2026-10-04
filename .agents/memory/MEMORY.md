@@ -1,0 +1,1 @@
+- [Suhana demo profiles](suhana-demo-profiles.md) — keep sample accounts clearly marked, preview-only, and outside paid interactions.

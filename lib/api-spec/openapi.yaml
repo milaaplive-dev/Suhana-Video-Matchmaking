@@ -10,6 +10,14 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: profiles
+    description: User profiles and discovery
+  - name: conversations
+    description: Conversations, messages, and calls
+  - name: wallet
+    description: Credits and wallet activity
+  - name: safety
+    description: Blocking and reporting
 paths:
   /healthz:
     get:
@@ -24,7 +32,270 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me/profile:
+    get:
+      operationId: getMyProfile
+      tags: [profiles]
+      summary: Get the signed-in user's profile and credit balance
+      responses:
+        "200":
+          description: Profile and wallet summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyProfileResponse"
+        "401":
+          description: Sign-in required
+    put:
+      operationId: saveMyProfile
+      tags: [profiles]
+      summary: Create or update the signed-in user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileInput"
+      responses:
+        "200":
+          description: Saved profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Profile"
+        "400":
+          description: Invalid profile
+  /profiles/discover:
+    get:
+      operationId: discoverProfiles
+      tags: [profiles]
+      summary: Find profile suggestions using filters
+      parameters:
+        - name: gender
+          in: query
+          schema:
+            type: string
+        - name: ageMin
+          in: query
+          schema:
+            type: integer
+            minimum: 18
+        - name: ageMax
+          in: query
+          schema:
+            type: integer
+            minimum: 18
+        - name: location
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Matching profiles
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProfilesResponse"
+        "401":
+          description: Sign-in required
+  /profiles/{profileId}/block:
+    post:
+      operationId: blockProfile
+      tags: [safety]
+      summary: Block a profile
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      responses:
+        "200":
+          description: Profile blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "401":
+          description: Sign-in required
+  /profiles/{profileId}/report:
+    post:
+      operationId: reportProfile
+      tags: [safety]
+      summary: Report a profile
+      parameters:
+        - $ref: "#/components/parameters/ProfileId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportInput"
+      responses:
+        "201":
+          description: Report recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+        "401":
+          description: Sign-in required
+  /conversations:
+    get:
+      operationId: listConversations
+      tags: [conversations]
+      summary: List the signed-in user's conversations
+      responses:
+        "200":
+          description: Conversations
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationListResponse"
+        "401":
+          description: Sign-in required
+    post:
+      operationId: startConversation
+      tags: [conversations]
+      summary: Start or reopen a conversation with a profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StartConversationInput"
+      responses:
+        "200":
+          description: Conversation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Conversation"
+        "401":
+          description: Sign-in required
+        "404":
+          description: Profile not found
+  /conversations/{conversationId}/messages:
+    get:
+      operationId: listMessages
+      tags: [conversations]
+      summary: Get messages in a conversation
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          description: Conversation messages
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageListResponse"
+        "401":
+          description: Sign-in required
+        "404":
+          description: Conversation not found
+    post:
+      operationId: sendMessage
+      tags: [conversations]
+      summary: Send a message, optionally using premium credits
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MessageInput"
+      responses:
+        "201":
+          description: Sent message and remaining balance
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageSendResult"
+        "402":
+          description: Not enough credits
+        "401":
+          description: Sign-in required
+  /conversations/{conversationId}/calls:
+    post:
+      operationId: startDirectCall
+      tags: [conversations]
+      summary: Start a credit-gated direct call
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "201":
+          description: Call started
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CallStartResponse"
+        "402":
+          description: Not enough credits
+        "401":
+          description: Sign-in required
+  /conversations/{conversationId}/realtime-ticket:
+    post:
+      operationId: createRealtimeTicket
+      tags: [conversations]
+      summary: Create a short-lived, one-use ticket for realtime signaling
+      parameters:
+        - $ref: "#/components/parameters/ConversationId"
+      responses:
+        "200":
+          description: Realtime connection ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RealtimeTicketResponse"
+        "401":
+          description: Sign-in required
+        "404":
+          description: Conversation not found
+  /wallet:
+    get:
+      operationId: getWallet
+      tags: [wallet]
+      summary: Get credit balance and recent activity
+      responses:
+        "200":
+          description: Wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletResponse"
+        "401":
+          description: Sign-in required
+  /wallet/demo-purchase:
+    post:
+      operationId: buyDemoCredits
+      tags: [wallet]
+      summary: Add clearly simulated credits to the wallet
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DemoPurchaseInput"
+      responses:
+        "200":
+          description: Updated wallet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WalletResponse"
+        "401":
+          description: Sign-in required
 components:
+  parameters:
+    ProfileId:
+      name: profileId
+      in: path
+      required: true
+      schema:
+        type: string
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +304,148 @@ components:
           type: string
       required:
         - status
+    Profile:
+      type: object
+      properties:
+        id: { type: string }
+        displayName: { type: string }
+        age: { type: integer }
+        gender: { type: string }
+        location: { type: string }
+        interests:
+          type: array
+          items: { type: string }
+        photoUrl: { type: ["string", "null"] }
+        bio: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+      required: [id, displayName, age, gender, location, interests, photoUrl, bio, createdAt]
+    ProfileInput:
+      type: object
+      properties:
+        displayName: { type: string, minLength: 1, maxLength: 60 }
+        age: { type: integer, minimum: 18, maximum: 120 }
+        gender: { type: string, minLength: 1, maxLength: 40 }
+        location: { type: string, minLength: 1, maxLength: 120 }
+        interests:
+          type: array
+          maxItems: 12
+          items: { type: string, maxLength: 40 }
+        photoUrl: { type: ["string", "null"], maxLength: 2000 }
+        bio: { type: ["string", "null"], maxLength: 500 }
+      required: [displayName, age, gender, location, interests]
+    MyProfileResponse:
+      type: object
+      properties:
+        profile:
+          oneOf:
+            - $ref: "#/components/schemas/Profile"
+            - type: "null"
+        credits: { type: integer }
+      required: [profile, credits]
+    ProfilesResponse:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items: { $ref: "#/components/schemas/Profile" }
+        total: { type: integer }
+      required: [profiles, total]
+    Conversation:
+      type: object
+      properties:
+        id: { type: string }
+        peer:
+          $ref: "#/components/schemas/Profile"
+        createdAt: { type: string, format: date-time }
+      required: [id, peer, createdAt]
+    ConversationPreview:
+      type: object
+      properties:
+        id: { type: string }
+        peer:
+          $ref: "#/components/schemas/Profile"
+        lastMessage:
+          oneOf:
+            - $ref: "#/components/schemas/Message"
+            - type: "null"
+        updatedAt: { type: string, format: date-time }
+      required: [id, peer, lastMessage, updatedAt]
+    ConversationListResponse:
+      type: array
+      items: { $ref: "#/components/schemas/ConversationPreview" }
+    Message:
+      type: object
+      properties:
+        id: { type: string }
+        conversationId: { type: string }
+        senderId: { type: string }
+        content: { type: string }
+        premium: { type: boolean }
+        createdAt: { type: string, format: date-time }
+      required: [id, conversationId, senderId, content, premium, createdAt]
+    MessageListResponse:
+      type: array
+      items: { $ref: "#/components/schemas/Message" }
+    StartConversationInput:
+      type: object
+      properties:
+        peerId: { type: string, minLength: 1 }
+      required: [peerId]
+    MessageInput:
+      type: object
+      properties:
+        content: { type: string, minLength: 1, maxLength: 2000 }
+        premium: { type: boolean }
+      required: [content, premium]
+    MessageSendResult:
+      type: object
+      properties:
+        message: { $ref: "#/components/schemas/Message" }
+        creditsRemaining: { type: integer }
+      required: [message, creditsRemaining]
+    CallStartResponse:
+      type: object
+      properties:
+        callId: { type: string }
+        creditsRemaining: { type: integer }
+      required: [callId, creditsRemaining]
+    RealtimeTicketResponse:
+      type: object
+      properties:
+        ticket: { type: string }
+        expiresInSeconds: { type: integer }
+      required: [ticket, expiresInSeconds]
+    WalletTransaction:
+      type: object
+      properties:
+        id: { type: integer }
+        amount: { type: integer }
+        reason: { type: string }
+        createdAt: { type: string, format: date-time }
+      required: [id, amount, reason, createdAt]
+    WalletResponse:
+      type: object
+      properties:
+        balance: { type: integer }
+        transactions:
+          type: array
+          items: { $ref: "#/components/schemas/WalletTransaction" }
+      required: [balance, transactions]
+    DemoPurchaseInput:
+      type: object
+      properties:
+        credits:
+          type: integer
+          enum: [100, 250, 500]
+      required: [credits]
+    ReportInput:
+      type: object
+      properties:
+        reason: { type: string, minLength: 3, maxLength: 500 }
+      required: [reason]
+    OkResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+      required: [ok]
 
